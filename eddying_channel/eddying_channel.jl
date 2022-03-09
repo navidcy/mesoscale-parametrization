@@ -256,16 +256,30 @@ V = Field(Average(v, dims=1))
 W = Field(Average(w, dims=1))
 
 b′ = b - B
+u′ = u - U
 v′ = v - V
 w′ = w - W
+c′ = c - C
+
+tke_op = @at (Center, Center, Center) (u′ * u′ + v′ * v′ + w′ * w′) / 2
+tke = Field(Average(tke_op, dims=1))
+
+uv_op = @at (Center, Center, Center) u′ * v′
+vw_op = @at (Center, Center, Center) v′ * w′
+uw_op = @at (Center, Center, Center) u′ * w′
 
 b′b′ = Field(Average(b′ * b′, dims=1))
-v′b′ = Field(Average(v′ * b′, dims=1))
-w′b′ = Field(Average(w′ * b′, dims=1))
+v′b′ = Field(Average(b′ * v′ , dims=1))
+w′b′ = Field(Average(b′ * w′ , dims=1))
+
+v′c′ = Field(Average(c′ * v′, dims=1))
+w′c′ = Field(Average(c′ * w′, dims=1))
 
 outputs = (; b, c, ζ, u, v, w)
 
-zonally_averaged_outputs = (b=B, u=U, v=V, w=W, c=C, η=η̄, vb=v′b′, wb=w′b′, bb=b′b′)
+zonally_averaged_outputs = (b=B, u=U, v=V, w=W, c=C, η=η̄,
+                            vb=v′b′, wb=w′b′, vc=v′c′, wc=w′c′, bb=b′b′, tke=tke,
+                            uv=u′v′, vw=v′w′, uw=u′w′)
 
 #####
 ##### Build checkpointer and output writer
@@ -322,7 +336,7 @@ run!(simulation, pickup=false)
 
 @info "Simulation completed in " * prettytime(simulation.run_wall_time)
 
-#=
+
 #####
 ##### Visualization
 #####
@@ -334,8 +348,9 @@ using GLMakie
 using JLD2
 
 fig = Figure(resolution = (2300, 1400))
-ax_b = fig[1:5, 1] = LScene(fig)
-ax_ζ = fig[1:5, 2] = LScene(fig)
+
+ax_b = fig[1, 1] = LScene(fig)
+ax_ζ = fig[1, 2] = LScene(fig)
 
 axis_rotation_angles = (π/24, -π/6, 0)
 
@@ -371,7 +386,7 @@ zu = zu .* zscale
 zb = zb .* zscale
 zζ = zζ .* zscale
 
-zonal_slice_displacement = 1.5
+zonal_slice_displacement = 1.4
 
 b_slices = (
       west = @lift(Array(slice_files.west["timeseries/b/"   * string($iter)][1, :, :])),
@@ -396,6 +411,7 @@ b_avg = @lift zonal_file["timeseries/b/" * string($iter)][1, :, :]
 u_avg = @lift zonal_file["timeseries/u/" * string($iter)][1, :, :]
 
 clims_u = @lift extrema(zonal_file["timeseries/u/" * string($iter)][1, :, :])
+clims_u = (-0.4, 0.4)
 
 surface!(ax_b, yu, zu, u_avg; transformation = (:yz, zonal_slice_displacement * xu[end]), colorrange=clims_u, colormap=:balance)
 contour!(ax_b, yb, zb, b_avg; levels = 25, color = :black, linewidth = 2, transformation = (:yz, zonal_slice_displacement * xb[end]), show_axis=false)
@@ -411,17 +427,17 @@ rotate_cam!(ax_b.scene, axis_rotation_angles)
        top = @lift(Array(slice_files.top["timeseries/ζ/"    * string($iter)][:, :, 1]))
 )
 
-u_slices = (
-      west = @lift(Array(slice_files.west["timeseries/u/"   * string($iter)][1, :, :])),
-      east = @lift(Array(slice_files.east["timeseries/u/"   * string($iter)][1, :, :])),
-     south = @lift(Array(slice_files.south["timeseries/u/"  * string($iter)][:, 1, :])),
-     north = @lift(Array(slice_files.north["timeseries/u/"  * string($iter)][:, 1, :])),
-    bottom = @lift(Array(slice_files.bottom["timeseries/u/" * string($iter)][:, :, 1])),
-       top = @lift(Array(slice_files.top["timeseries/u/"    * string($iter)][:, :, 1]))
-)
+# u_slices = (
+#       west = @lift(Array(slice_files.west["timeseries/u/"   * string($iter)][1, :, :])),
+#       east = @lift(Array(slice_files.east["timeseries/u/"   * string($iter)][1, :, :])),
+#      south = @lift(Array(slice_files.south["timeseries/u/"  * string($iter)][:, 1, :])),
+#      north = @lift(Array(slice_files.north["timeseries/u/"  * string($iter)][:, 1, :])),
+#     bottom = @lift(Array(slice_files.bottom["timeseries/u/" * string($iter)][:, :, 1])),
+#        top = @lift(Array(slice_files.top["timeseries/u/"    * string($iter)][:, :, 1]))
+# )
 
 # clims_ζ = @lift extrema(slice_files.west["timeseries/ζ/" * string($iter)][:])
-clims_ζ = (-6e-5, 6e-5)
+clims_ζ = (-5e-5, 5e-5)
 kwargs_ζ = (colorrange = clims_ζ, colormap=:curl, show_axis=false)
 
 surface!(ax_ζ, yζ, zζ, ζ_slices.west;   transformation = (:yz, xζ[1]),   kwargs_ζ...)
@@ -433,8 +449,6 @@ surface!(ax_ζ, xζ, yζ, ζ_slices.top;    transformation = (:xy, zζ[end]), kw
 
 b_avg = @lift zonal_file["timeseries/b/" * string($iter)][1, :, :]
 u_avg = @lift zonal_file["timeseries/u/" * string($iter)][1, :, :]
-
-clims_u = @lift extrema(zonal_file["timeseries/u/" * string($iter)][1, :, :])
 
 surface!(ax_ζ, yu, zu, u_avg; transformation = (:yz, zonal_slice_displacement * xu[end]), colorrange=clims_u, colormap=:balance)
 contour!(ax_ζ, yb, zb, b_avg; levels = 25, color = :black, linewidth = 2, transformation = (:yz, zonal_slice_displacement * xb[end]), show_axis=false)
@@ -458,4 +472,3 @@ for file in slice_files
 end
 
 close(zonal_file)
-=#
