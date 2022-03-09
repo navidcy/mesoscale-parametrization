@@ -159,7 +159,7 @@ Fb = Forcing(buoyancy_relaxation, discrete_form = true, parameters = parameters)
 κz = 0.5e-5 # [m²/s] vertical diffusivity
 νz = 3e-4   # [m²/s] vertical viscocity
 
-vertical_diffusive_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization, ν = νz, κ = κz)
+vertical_diffusive_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization(), ν = νz, κ = κz)
 
 horizontal_diffusive_closure = HorizontalScalarDiffusivity(ν = νh, κ = κh)
 
@@ -178,7 +178,7 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
                                     buoyancy = BuoyancyTracer(),
                                     coriolis = coriolis,
                                     closure = (catke, vertical_diffusive_closure, horizontal_diffusive_closure),
-                                    tracers = (:b, :c),
+                                    tracers = (:b, :c, :e),
                                     boundary_conditions = (b=b_bcs, u=u_bcs, v=v_bcs),
                                     forcing = (; b=Fb))
 
@@ -187,8 +187,6 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
 #####
 ##### Initial conditions
 #####
-
-
 
 # resting initial condition
 ε(σ) = σ * randn()
@@ -265,6 +263,11 @@ tke = Field(Average(tke_op, dims=1))
 uv_op = @at (Center, Center, Center) u′ * v′
 vw_op = @at (Center, Center, Center) v′ * w′
 uw_op = @at (Center, Center, Center) u′ * w′
+
+u′v′ = Field(Average(uv_op, dims=1))
+v′w′ = Field(Average(vw_op, dims=1))
+u′u′ = Field(Average(uw_op, dims=1))
+
 
 b′b′ = Field(Average(b′ * b′, dims=1))
 v′b′ = Field(Average(b′ * v′ , dims=1))
