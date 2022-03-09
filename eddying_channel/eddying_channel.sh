@@ -18,7 +18,7 @@ export JULIA_LOAD_PATH="@":"@v#.#":"@stdlib":"@site"
 export JULIA_CUDA_USE_BINARYBUILDER="false"
 export JULIA_NUM_THREADS=48
 
-module load cuda/11.0.3
+module load cuda/11.4.1
 
 # Run Julia
 cd /g/data/v45/nc3020/mesoscale-parametrization/eddying_channel
