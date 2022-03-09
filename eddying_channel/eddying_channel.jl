@@ -177,7 +177,7 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
                                     tracer_advection = WENO5(),
                                     buoyancy = BuoyancyTracer(),
                                     coriolis = coriolis,
-                                    closure = (catke, vertical_diffusive_closure, horizontal_diffusive_closure),
+                                    closure = (horizontal_diffusive_closure, vertical_diffusive_closure, catke), #, horizontal_diffusive_closure),
                                     tracers = (:b, :c, :e),
                                     boundary_conditions = (b=b_bcs, u=u_bcs, v=v_bcs),
                                     forcing = (; b=Fb))
@@ -241,6 +241,7 @@ simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterv
 u, v, w = model.velocities
 b, c = model.tracers.b, model.tracers.c
 η = model.free_surface.η
+#=
 
 ζ = Field(∂x(v) - ∂y(u))
 
@@ -313,7 +314,6 @@ simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_out
                                                      prefix = filename * "_zonal_average",
                                                      force = true)
 
-#=
 simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_outputs,
                                                      schedule = AveragedTimeInterval(60days),
                                                      prefix = filename * "_zonal_time_average",
