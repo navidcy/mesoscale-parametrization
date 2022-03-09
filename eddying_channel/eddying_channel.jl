@@ -312,13 +312,13 @@ simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_out
                                                      schedule = TimeInterval(save_fields_interval),
                                                      prefix = filename * "_zonal_average",
                                                      force = true)
-
+#=
 simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_outputs,
                                                      schedule = AveragedTimeInterval(60days),
                                                      prefix = filename * "_zonal_time_average",
                                                      force = true)
 
-#=
+
 simulation.output_writers[:averages] = JLD2OutputWriter(model, averaged_outputs,
                                                         schedule = AveragedTimeInterval(1days, window=1days, stride=1),
                                                         prefix = "eddying_channel_averages",
