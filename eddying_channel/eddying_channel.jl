@@ -266,8 +266,7 @@ uw_op = @at (Center, Center, Center) u′ * w′
 
 u′v′ = Field(Average(uv_op, dims=1))
 v′w′ = Field(Average(vw_op, dims=1))
-u′u′ = Field(Average(uw_op, dims=1))
-
+u′w′ = Field(Average(uw_op, dims=1))
 
 b′b′ = Field(Average(b′ * b′, dims=1))
 v′b′ = Field(Average(b′ * v′ , dims=1))
@@ -279,8 +278,8 @@ w′c′ = Field(Average(c′ * w′, dims=1))
 outputs = (; b, c, ζ, u, v, w)
 
 zonally_averaged_outputs = (b=B, u=U, v=V, w=W, c=C, η=η̄,
-                            vb=v′b′, wb=w′b′, vc=v′c′, wc=w′c′, bb=b′b′, tke=tke,
-                            uv=u′v′, vw=v′w′, uw=u′w′)
+                            vb=v′b′, wb=w′b′, vc=v′c′, wc=w′c′, bb=b′b′,)
+                            # tke=tke, uv=u′v′, vw=v′w′, uw=u′w′)
 
 #####
 ##### Build checkpointer and output writer
@@ -291,15 +290,15 @@ simulation.output_writers[:checkpointer] = Checkpointer(model,
                                                         prefix = filename,
                                                         force = true)
 
-slicers = (west = FieldSlicer(i=1),
-           east = FieldSlicer(i=grid.Nx),
-           south = FieldSlicer(j=1),
-           north = FieldSlicer(j=grid.Ny),
-           bottom = FieldSlicer(k=1),
-           top = FieldSlicer(k=grid.Nz))
+slicers = (west = (1, :, :),
+           east = (grid.Nx, :, :),
+           south = (:, 1, :),
+           north = (:, grid.Ny, :),
+           bottom = (:, :, 1),
+           top = (:, :, grid.Nz))
 
 for side in keys(slicers)
-    field_slicer = slicers[side]
+    indices = slicers[side]
 
     simulation.output_writers[side] = JLD2OutputWriter(model, outputs,
                                                        schedule = TimeInterval(save_fields_interval),
@@ -345,6 +344,8 @@ run!(simulation, pickup=false)
 # ENV["GKSwstype"] = "100"
 # using CairoMakie
 
+#=
+
 using GLMakie
 using JLD2
 
@@ -359,7 +360,7 @@ axis_rotation_angles = (π/24, -π/6, 0)
 
 iter = Observable(0)
 
-filename = "eddying_channel_convadj"
+filename = "eddying_channel_catke"
 
 zonal_file = jldopen(filename * "_zonal_average.jld2")
 
@@ -473,3 +474,4 @@ for file in slice_files
 end
 
 close(zonal_file)
+=#
