@@ -272,14 +272,15 @@ b′b′ = Field(Average(b′ * b′, dims=1))
 v′b′ = Field(Average(b′ * v′ , dims=1))
 w′b′ = Field(Average(b′ * w′ , dims=1))
 
+c′c′ = Field(Average(c′ * c′, dims=1))
 v′c′ = Field(Average(c′ * v′, dims=1))
 w′c′ = Field(Average(c′ * w′, dims=1))
 
 outputs = (; b, c, ζ, u, v, w)
 
 zonally_averaged_outputs = (b=B, u=U, v=V, w=W, c=C, η=η̄,
-                            vb=v′b′, wb=w′b′, vc=v′c′, wc=w′c′, bb=b′b′,)
-                            # tke=tke, uv=u′v′, vw=v′w′, uw=u′w′)
+                            vb=v′b′, wb=w′b′, vc=v′c′, wc=w′c′, bb=b′b′,
+                            tke=tke, uv=u′v′, vw=v′w′, uw=u′w′, cc=c′c′)
 
 #####
 ##### Build checkpointer and output writer
@@ -300,14 +301,14 @@ slicers = (west = (1, :, :),
 for side in keys(slicers)
     indices = slicers[side]
 
-    simulation.output_writers[side] = JLD2OutputWriter(model, outputs,
+    simulation.output_writers[side] = JLD2OutputWriter(model, outputs;
                                                        schedule = TimeInterval(save_fields_interval),
-                                                       field_slicer = field_slicer,
+                                                       indices,
                                                        prefix = filename * "_$(side)_slice",
                                                        force = true)
 end
 
-simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_outputs,
+simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_outputs;
                                                      schedule = TimeInterval(save_fields_interval),
                                                      prefix = filename * "_zonal_average",
                                                      force = true)
