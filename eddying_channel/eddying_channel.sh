@@ -21,6 +21,6 @@ export JULIA_NUM_THREADS=48
 module load cuda/11.0.3
 
 # Run Julia
-cd /g/data/v45/nc3020/mesoscale-parametrization-OSM2022/eddying_channel
+cd /g/data/v45/nc3020/mesoscale-parametrization/eddying_channel
 
 /g/data/v45/nc3020/julia/julia --color=yes --project eddying_channel.jl > $PBS_JOBID.log
