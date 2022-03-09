@@ -241,7 +241,6 @@ simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterv
 u, v, w = model.velocities
 b, c = model.tracers.b, model.tracers.c
 η = model.free_surface.η
-#=
 
 ζ = Field(∂x(v) - ∂y(u))
 
@@ -318,7 +317,6 @@ simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_out
                                                      schedule = AveragedTimeInterval(60days),
                                                      prefix = filename * "_zonal_time_average",
                                                      force = true)
-=#
 
 #=
 simulation.output_writers[:averages] = JLD2OutputWriter(model, averaged_outputs,
