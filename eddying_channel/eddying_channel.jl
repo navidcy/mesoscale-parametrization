@@ -90,7 +90,7 @@ cᵖ = 3994.0   # [J K⁻¹] heat capacity
 
 parameters = (Ly = Ly,
               Lz = Lz,
-              Qᵇ = 10 / (ρ * cᵖ) * α * g,          # buoyancy flux magnitude [m² s⁻³]    
+              Qᵇ = 10 / (ρ * cᵖ) * α * g,          # buoyancy flux magnitude [m² s⁻³]
               y_shutoff = 5/6 * Ly,                # shutoff location for buoyancy flux [m]
               τ = 0.15/ρ,                          # surface kinematic wind stress [m² s⁻²]
               μ = 1 / 30days,                      # bottom drag damping time-scale [s⁻¹]
@@ -115,7 +115,7 @@ end
 
 u_stress_bc = FluxBoundaryCondition(u_stress, discrete_form=true, parameters=parameters)
 
-@inline u_drag(i, j, grid, clock, model_fields, p) = @inbounds - p.μ * p.Lz * model_fields.u[i, j, 1] 
+@inline u_drag(i, j, grid, clock, model_fields, p) = @inbounds - p.μ * p.Lz * model_fields.u[i, j, 1]
 @inline v_drag(i, j, grid, clock, model_fields, p) = @inbounds - p.μ * p.Lz * model_fields.v[i, j, 1]
 
 u_drag_bc = FluxBoundaryCondition(u_drag, discrete_form=true, parameters=parameters)
@@ -163,6 +163,9 @@ vertical_diffusive_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDis
 
 horizontal_diffusive_closure = HorizontalScalarDiffusivity(ν = νh, κ = κh)
 
+convective_adjustment = ConvectiveAdjustmentVerticalDiffusivity(convective_κz = 1.0,
+                                                                convective_νz = 0.0)
+
 catke = CATKEVerticalDiffusivity()
 
 #####
@@ -177,7 +180,7 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
                                     tracer_advection = WENO5(),
                                     buoyancy = BuoyancyTracer(),
                                     coriolis = coriolis,
-                                    closure = (horizontal_diffusive_closure, vertical_diffusive_closure, catke), #, horizontal_diffusive_closure),
+                                    closure = (horizontal_diffusive_closure, vertical_diffusive_closure, catke, convective_adjustment),
                                     tracers = (:b, :c, :e),
                                     boundary_conditions = (b=b_bcs, u=u_bcs, v=v_bcs),
                                     forcing = (; b=Fb))
@@ -227,7 +230,7 @@ function print_progress(sim)
             prettytime(sim.Δt))
 
     wall_clock[1] = time_ns()
-    
+
     return nothing
 end
 
@@ -308,11 +311,11 @@ for side in keys(slicers)
                                                        force = true)
 end
 
+#=
 simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_outputs;
                                                      schedule = TimeInterval(save_fields_interval),
                                                      prefix = filename * "_zonal_average",
                                                      force = true)
-#=
 simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_outputs,
                                                      schedule = AveragedTimeInterval(60days),
                                                      prefix = filename * "_zonal_time_average",
@@ -463,7 +466,7 @@ fig[0, :] = Label(fig, title, textsize=50)
 
 iterations = parse.(Int, keys(zonal_file["timeseries/t"]))
 
-record(fig, "eddying_channel_convadj.mp4", iterations, framerate=12) do i
+record(fig, "eddying_channel_catke.mp4", iterations, framerate=12) do i
     @info "Plotting iteration $i of $(iterations[end])..."
     iter[] = i
 end

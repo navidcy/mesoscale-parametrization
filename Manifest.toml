@@ -904,11 +904,9 @@ version = "0.4.0"
 
 [[Oceananigans]]
 deps = ["Adapt", "CUDA", "CUDAKernels", "Crayons", "CubedSphere", "Dates", "DocStringExtensions", "FFTW", "Glob", "IncompleteLU", "InteractiveUtils", "IterativeSolvers", "JLD2", "KernelAbstractions", "LinearAlgebra", "Logging", "MPI", "NCDatasets", "OffsetArrays", "OrderedCollections", "PencilFFTs", "Pkg", "Printf", "Random", "Rotations", "SafeTestsets", "SeawaterPolynomials", "SparseArrays", "Statistics", "StructArrays", "Tullio"]
-git-tree-sha1 = "f151e14ab1746122ce0a70796a508af2b47d6d2e"
-repo-rev = "glw-ncc/catke-play-nice"
-repo-url = "https://github.com/CliMA/Oceananigans.jl.git"
+git-tree-sha1 = "4f477afc9e1d4dc34aa417f59cb1348c0b418eec"
 uuid = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
-version = "0.71.6"
+version = "0.72.1"
 
 [[OffsetArrays]]
 deps = ["Adapt"]
