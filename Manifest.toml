@@ -904,9 +904,7 @@ version = "0.4.0"
 
 [[Oceananigans]]
 deps = ["Adapt", "CUDA", "CUDAKernels", "Crayons", "CubedSphere", "Dates", "DocStringExtensions", "FFTW", "Glob", "IncompleteLU", "InteractiveUtils", "IterativeSolvers", "JLD2", "KernelAbstractions", "LinearAlgebra", "Logging", "MPI", "NCDatasets", "OffsetArrays", "OrderedCollections", "PencilFFTs", "Pkg", "Printf", "Random", "Rotations", "SafeTestsets", "SeawaterPolynomials", "SparseArrays", "Statistics", "StructArrays", "Tullio"]
-git-tree-sha1 = "8cdb85002be13f5d17e1900e9231d4a21908e7b5"
-repo-rev = "glw/closures-cleanup"
-repo-url = "https://github.com/CliMA/Oceananigans.jl.git"
+git-tree-sha1 = "dff79b1bb0174d00e6aae96197cf8cf0a117f1a2"
 uuid = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 version = "0.73.0"
 
