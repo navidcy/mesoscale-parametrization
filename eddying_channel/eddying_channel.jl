@@ -29,7 +29,7 @@ const Lz = 2kilometers    # depth [m]
 # number of grid points
 Nx = 128
 Ny = 128
-Nz = 60
+Nz = 120
 
 save_fields_interval = 7days
 stop_time = 20years + 1day
@@ -180,7 +180,7 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
                                     tracer_advection = WENO5(),
                                     buoyancy = BuoyancyTracer(),
                                     coriolis = coriolis,
-                                    closure = (horizontal_diffusive_closure, vertical_diffusive_closure, catke, convective_adjustment),
+                                    closure = (horizontal_diffusive_closure, vertical_diffusive_closure, catke),
                                     tracers = (:b, :c, :e),
                                     boundary_conditions = (b=b_bcs, u=u_bcs, v=v_bcs),
                                     forcing = (; b=Fb))
@@ -213,7 +213,7 @@ simulation = Simulation(model, Δt=Δt₀, stop_time=stop_time)
 
 # add timestep wizard callback
 wizard = TimeStepWizard(cfl=0.1, max_change=1.1, max_Δt=20minutes)
-simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(20))
+simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
 
 # add progress callback
 wall_clock = [time_ns()]
@@ -247,6 +247,9 @@ b, c = model.tracers.b, model.tracers.c
 
 ζ = Field(∂x(v) - ∂y(u))
 
+outputs = (; b, c, ζ, u, v, w)
+
+#=
 B = Field(Average(b, dims=1))
 C = Field(Average(c, dims=1))
 U = Field(Average(u, dims=1))
@@ -279,11 +282,11 @@ c′c′ = Field(Average(c′ * c′, dims=1))
 v′c′ = Field(Average(c′ * v′, dims=1))
 w′c′ = Field(Average(c′ * w′, dims=1))
 
-outputs = (; b, c, ζ, u, v, w)
-
 zonally_averaged_outputs = (b=B, u=U, v=V, w=W, c=C, η=η̄,
                             vb=v′b′, wb=w′b′, vc=v′c′, wc=w′c′, bb=b′b′,
                             tke=tke, uv=u′v′, vw=v′w′, uw=u′w′, cc=c′c′)
+
+=#
 
 #####
 ##### Build checkpointer and output writer
