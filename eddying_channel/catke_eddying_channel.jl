@@ -128,8 +128,8 @@ catke = CATKEVerticalDiffusivity()
 convective_adjustment = ConvectiveAdjustmentVerticalDiffusivity(convective_κz = 1.0,
                                                                 convective_νz = 0.0)
 
-closures = (catke, vertical_diffusivity, horizontal_diffusivity)
-#closures = (convective_adjustment, vertical_diffusivity, horizontal_diffusivity)
+closure = (catke, vertical_diffusivity, horizontal_diffusivity)
+#closure = (convective_adjustment, vertical_diffusivity, horizontal_diffusivity)
 
 #####
 ##### Model building
