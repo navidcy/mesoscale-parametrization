@@ -47,7 +47,7 @@ grid = RectilinearGrid(arch;
                        halo = (3, 3, 3),
                        x = (0, Lx),
                        y = (0, Ly),
-                       z = (-Lz, 0)) #linearly_spaced_faces)
+                       z = linearly_spaced_faces) #(-Lz, 0)) #
 
 @info "Built a grid: $grid."
 
@@ -303,4 +303,4 @@ fig = Figure()
 ax = Axis(fig[1, 1])
 heatmap!(ax, interior(ζ_ts[Nt-2])[:, :, 1])
 
-save("vorticity_convective_adjustment.png", fig)
+save("vorticity_catke.png", fig)
