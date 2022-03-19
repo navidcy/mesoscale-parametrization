@@ -166,7 +166,9 @@ horizontal_diffusive_closure = HorizontalScalarDiffusivity(ν = νh, κ = κh)
 convective_adjustment = ConvectiveAdjustmentVerticalDiffusivity(convective_κz = 1.0,
                                                                 convective_νz = 0.0)
 
-catke = CATKEVerticalDiffusivity()
+# catke = CATKEVerticalDiffusivity()
+
+closure = (horizontal_diffusive_closure, vertical_diffusive_closure, convective_adjustment)
 
 #####
 ##### Model building
