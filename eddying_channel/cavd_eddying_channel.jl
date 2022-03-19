@@ -47,28 +47,13 @@ stop_time = 20years + 1day
 Δz_center_linear(k) = Lz * (σ - 1) * σ^(Nz - k) / (σ^Nz - 1) # k=1 is the bottom-most cell, k=Nz is the top cell
 linearly_spaced_faces(k) = k==1 ? -Lz : - Lz + sum(Δz_center_linear.(1:k-1))
 
-refinement = 2 # controls spacing near surface (higher means finer spaced)
-stretching = 4  # controls rate of stretching at bottom
-
-# Normalized height ranging from 0 to 1
-h(k) = (k - 1) / Nz
-
-# Linear near-surface generator
-ζ₀(k) = 1 + (h(k) - 1) / refinement
-
-# Bottom-intensified stretching function
-Σ(k) = (1 - exp(-stretching * h(k))) / (1 - exp(-stretching))
-
-# Generating function
-z_faces(k) = Lz * (ζ₀(k) * Σ(k) - 1)
-
 grid = RectilinearGrid(arch;
                        topology = (Periodic, Bounded, Bounded),
                        size = (Nx, Ny, Nz),
                        halo = (3, 3, 3),
                        x = (0, Lx),
                        y = (0, Ly),
-                       z = (-Lz, 0)) # z_faces)
+                       z = linearly_spaced_faces)
 
 # The vertical spacing versus depth for the prescribed grid
 # using GLMakie
@@ -154,7 +139,11 @@ Fb = Forcing(buoyancy_relaxation, discrete_form = true, parameters = parameters)
 # Turbulence closures
 
 κh = 0.5e-5 # [m²/s] horizontal diffusivity
-νh = 30.0   # [m²/s] horizontal viscocity
+νh = 30.0   # [m²/s] horizontal viscosity
+
+Δh = grid.Δxᶜᵃᵃ
+κ₄h = 1 / 20days * Δh^4 
+
 κz = 0.5e-5 # [m²/s] vertical diffusivity
 νz = 3e-4   # [m²/s] vertical viscocity
 
@@ -175,8 +164,8 @@ closure = (horizontal_diffusive_closure, vertical_diffusive_closure, convective_
 
 model = HydrostaticFreeSurfaceModel(; grid,
                                       free_surface = ImplicitFreeSurface(),
-                                      momentum_advection = WENO5(),
-                                      tracer_advection = WENO5(),
+                                      momentum_advection = WENO5(; grid),
+                                      tracer_advection = WENO5(; grid),
                                       buoyancy = BuoyancyTracer(),
                                       coriolis = coriolis,
                                       closure,
@@ -342,8 +331,18 @@ run!(simulation, pickup=false)
 ##### Visualization
 #####
 
-# ENV["GKSwstype"] = "100"
-# using CairoMakie
+
+ENV["GKSwstype"] = "100"
+using CairoMakie
+
+ζ_ts = FieldTimeSeries(filename * "_top_slice.jld2", "ζ", architecture=CPU())
+Nt = length(ζ_ts.times)
+
+fig = Figure()
+ax = Axis(fig[1, 1])
+heatmap!(ax, interior(ζ_ts[Nt-2])[:, :, 1])
+
+save("vorticity_convective_adjustment.png", fig)
 
 #=
 

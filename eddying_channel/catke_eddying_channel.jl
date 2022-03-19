@@ -24,8 +24,8 @@ Nx = 128
 Ny = 128
 Nz = 60
 
-save_fields_interval = 14days
-stop_time = 30years
+save_fields_interval = 7days
+stop_time = 10years
 Δt₀ = 10minutes
 
 # stretched grid
@@ -47,7 +47,7 @@ grid = RectilinearGrid(arch;
                        halo = (3, 3, 3),
                        x = (0, Lx),
                        y = (0, Ly),
-                       z = (-Lz, 0)) # linearly_spaced_faces)
+                       z = (-Lz, 0)) #linearly_spaced_faces)
 
 @info "Built a grid: $grid."
 
@@ -176,7 +176,7 @@ simulation = Simulation(model, Δt=Δt₀, stop_time=stop_time)
 
 # add timestep wizard callback
 wizard = TimeStepWizard(cfl=0.1, max_change=1.1, max_Δt=20minutes)
-simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(20))
+simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
 
 # add progress callback
 wall_clock = [time_ns()]
@@ -293,13 +293,14 @@ run!(simulation)
 
 @info "Simulation completed in " * prettytime(simulation.run_wall_time)
 
-using GLMakie
+ENV["GKSwstype"] = "100"
+using CairoMakie
 
 ζ_ts = FieldTimeSeries(filename * "_top_slice.jld2", "ζ", architecture=CPU())
 Nt = length(ζ_ts.times)
 
 fig = Figure()
 ax = Axis(fig[1, 1])
-heatmap!(ax, interior(ζ_ts[Nt])[:, :, 1])
+heatmap!(ax, interior(ζ_ts[Nt-2])[:, :, 1])
 
-display(fig)
+save("vorticity_convective_adjustment.png", fig)
