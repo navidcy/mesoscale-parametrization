@@ -12,14 +12,13 @@ using Oceananigans.Units
 using Oceananigans.OutputReaders: FieldTimeSeries
 using Oceananigans.Grids: xnode, ynode, znode
 using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
-using Oceananigans.TurbulenceClosures.CATKEVerticalDiffusivities: CATKEVerticalDiffusivity
 
 using Random
 Random.seed!(1234)
 
 arch = GPU()
 
-filename = "eddying_channel_catke"
+filename = "eddying_channel_convectiveadjustment"
 
 # Domain
 const Lx = 2000kilometers # zonal domain length [m]
@@ -166,8 +165,6 @@ horizontal_diffusive_closure = HorizontalScalarDiffusivity(ν = νh, κ = κh)
 convective_adjustment = ConvectiveAdjustmentVerticalDiffusivity(convective_κz = 1.0,
                                                                 convective_νz = 0.0)
 
-# catke = CATKEVerticalDiffusivity()
-
 closure = (horizontal_diffusive_closure, vertical_diffusive_closure, convective_adjustment)
 
 #####
@@ -176,16 +173,16 @@ closure = (horizontal_diffusive_closure, vertical_diffusive_closure, convective_
 
 @info "Building a model..."
 
-model = HydrostaticFreeSurfaceModel(grid = grid,
-                                    free_surface = ImplicitFreeSurface(),
-                                    momentum_advection = WENO5(),
-                                    tracer_advection = WENO5(),
-                                    buoyancy = BuoyancyTracer(),
-                                    coriolis = coriolis,
-                                    closure = (horizontal_diffusive_closure, vertical_diffusive_closure, catke, convective_adjustment),
-                                    tracers = (:b, :c, :e),
-                                    boundary_conditions = (b=b_bcs, u=u_bcs, v=v_bcs),
-                                    forcing = (; b=Fb))
+model = HydrostaticFreeSurfaceModel(; grid,
+                                      free_surface = ImplicitFreeSurface(),
+                                      momentum_advection = WENO5(),
+                                      tracer_advection = WENO5(),
+                                      buoyancy = BuoyancyTracer(),
+                                      coriolis = coriolis,
+                                      closure,
+                                      tracers = (:b, :c, :e),
+                                      boundary_conditions = (b=b_bcs, u=u_bcs, v=v_bcs),
+                                      forcing = (; b=Fb))
 
 @info "Built $model."
 
@@ -326,7 +323,7 @@ simulation.output_writers[:zonal] = JLD2OutputWriter(model, zonally_averaged_out
 
 simulation.output_writers[:averages] = JLD2OutputWriter(model, averaged_outputs,
                                                         schedule = AveragedTimeInterval(1days, window=1days, stride=1),
-                                                        prefix = "eddying_channel_averages",
+                                                        prefix = filename * "_averages",
                                                         verbose = true,
                                                         force = true)
 =#
@@ -364,7 +361,7 @@ axis_rotation_angles = (π/24, -π/6, 0)
 
 iter = Observable(0)
 
-filename = "eddying_channel_catke"
+filename = "eddying_channel_convectiveadjustment"
 
 zonal_file = jldopen(filename * "_zonal_average.jld2")
 
