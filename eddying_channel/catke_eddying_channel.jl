@@ -22,10 +22,10 @@ const Lz = 2kilometers    # depth [m]
 # number of grid points
 Nx = 128
 Ny = 128
-Nz = 48
+Nz = 60
 
-save_fields_interval = 7days
-stop_time = 100years
+save_fields_interval = 14days
+stop_time = 30years
 Δt₀ = 10minutes
 
 # stretched grid
@@ -47,7 +47,7 @@ grid = RectilinearGrid(arch;
                        halo = (3, 3, 3),
                        x = (0, Lx),
                        y = (0, Ly),
-                       z = linearly_spaced_faces)
+                       z = (-Lz, 0)) # linearly_spaced_faces)
 
 @info "Built a grid: $grid."
 
@@ -137,16 +137,16 @@ closures = (catke, vertical_diffusivity, horizontal_diffusivity)
 
 @info "Building a model..."
 
-model = HydrostaticFreeSurfaceModel(grid = grid,
-                                    free_surface = ImplicitFreeSurface(),
-                                    momentum_advection = WENO5(; grid),
-                                    tracer_advection = WENO5(; grid),
-                                    buoyancy = BuoyancyTracer(),
-                                    coriolis = BetaPlane(f₀ = -1e-4, β = 1e-11),
-                                    closure = closures,
-                                    tracers = (:b, :c, :e),
-                                    boundary_conditions = (b=b_bcs, u=u_bcs, v=v_bcs),
-                                    forcing = (; b=Fb))
+model = HydrostaticFreeSurfaceModel(; grid,
+                                      free_surface = ImplicitFreeSurface(),
+                                      momentum_advection = WENO5(),
+                                      tracer_advection = WENO5(),
+                                      buoyancy = BuoyancyTracer(),
+                                      coriolis = BetaPlane(f₀ = -1e-4, β = 1e-11),
+                                      closure,
+                                      tracers = (:b, :c, :e),
+                                      boundary_conditions = (b=b_bcs, u=u_bcs, v=v_bcs),
+                                      forcing = (; b=Fb))
 
 @info "Built $model."
 
@@ -175,7 +175,7 @@ set!(model, b=bᵢ, u=uᵢ, v=vᵢ, w=wᵢ, c=cᵢ)
 simulation = Simulation(model, Δt=Δt₀, stop_time=stop_time)
 
 # add timestep wizard callback
-wizard = TimeStepWizard(cfl=0.1, max_change=1.1, max_Δt=10minutes)
+wizard = TimeStepWizard(cfl=0.1, max_change=1.1, max_Δt=20minutes)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(20))
 
 # add progress callback
