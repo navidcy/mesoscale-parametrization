@@ -2,7 +2,8 @@ using Oceananigans
 using Oceananigans.Units
 using GLMakie
 
-filename = "mixed_layer_baroclinic_adjustment"
+#filename = "mixed_layer_baroclinic_adjustment"
+filename = "mixed_layer_baroclinic_equilibrium"
 
 fig = Figure(resolution = (2400, 1600))
 
@@ -13,11 +14,12 @@ bb_t = FieldTimeSeries(filename * "_bottom_slice.jld2", "b")
 B_t = FieldTimeSeries(filename * "_zonal_average.jld2", "b")
 U_t = FieldTimeSeries(filename * "_zonal_average.jld2", "u")
 
-xc, yc, zc = nodes(b_t)
-xf, yf, zf = nodes(ζ_t)
+xc, yc, zc = nodes(bt_t)
+xf, yf, zf = nodes(ζt_t)
+grid = bt_t.grid
 zf = znodes(Face, grid)[2:grid.Nz]
 
-times = b_t.times
+times = bt_t.times
 Nt = length(times)
 slider = Slider(fig[1, 1:2], range=1:Nt, startvalue=1)
 n = slider.value
@@ -76,3 +78,6 @@ contour!(axN, yc, zc, Bn; levels=15, linewidth=2, color=:black)
 
 display(fig)
 
+record(fig, filename * ".mp4", 1:Nt, framerate=12) do nn
+    n[] = nn
+end

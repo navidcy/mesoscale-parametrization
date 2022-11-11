@@ -86,7 +86,7 @@ simulation.callbacks[:print_progress] =
 
 b = model.tracers.b
 u, v, w = model.velocities
-ζ = ∂y(v) - ∂y(u)
+ζ = ∂x(v) - ∂y(u)
 
 B = Field(Average(b, dims=1))
 U = Field(Average(u, dims=1))
