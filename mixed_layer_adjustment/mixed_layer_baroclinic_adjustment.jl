@@ -7,14 +7,14 @@ using CairoMakie
 d_ramp_dy(y, Δy) = sech(y / Δy)^2 / (2Δy)
 
 architecture = GPU()
-Nx = 512
-Ny = 128
-Nz = 64
+Nx = 1024
+Ny = 256
+Nz = 128
 Lx = 5 * 200kilometers # east-west extent [m]
 Ly = 200kilometers     # north-south extent [m]
 Lz = 300meters         # depth [m]
-N² = 0.0 #4e-6         # [s⁻²] buoyancy frequency / stratification
-M² = 2e-8              # [s⁻²] horizontal buoyancy gradient
+N² = 4e-6              # [s⁻²] buoyancy frequency / stratification
+M² = 8e-8              # [s⁻²] horizontal buoyancy gradient
 Δy = 10kilometers      # width of the region of the front
 Δb = Δy * M²           # buoyancy jump associated with the front
 ϵᵇ = 1e-2 * Δb         # noise amplitude
