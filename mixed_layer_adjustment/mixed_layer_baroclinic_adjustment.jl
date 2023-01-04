@@ -3,44 +3,50 @@ using Oceananigans.Units
 using Printf
 using CairoMakie
 
-@inline ramp(y, Δy) = (1 + tanh(y / Δy)) / 2 #min(max(0, y/Δy + 1/2), 1)
+# f uz = - by
+@inline ramp(y, Δy) = (1 + tanh(y / Δy)) / 2
 d_ramp_dy(y, Δy) = sech(y / Δy)^2 / (2Δy)
 
 architecture = GPU()
-Nx = 1024
-Ny = 256
+α = 4
 Nz = 128
-Lx = 5 * 200kilometers # east-west extent [m]
-Ly = 200kilometers     # north-south extent [m]
-Lz = 300meters         # depth [m]
-N² = 4e-6              # [s⁻²] buoyancy frequency / stratification
-M² = 8e-8              # [s⁻²] horizontal buoyancy gradient
-Δy = 10kilometers      # width of the region of the front
+Ny = 2Nz
+Nx = 2α * Ny
+Lx = α * 1000kilometers # east-west extent [m]
+Ly = 1000kilometers     # north-south extent [m]
+Lz = 1000meters         # depth [m]
+N² = 1e-5              # [s⁻²] buoyancy frequency / stratification
+M² = 2e-7              # [s⁻²] horizontal buoyancy gradient
+Δy = 100kilometers      # width of the region of the front
 Δb = Δy * M²           # buoyancy jump associated with the front
 ϵᵇ = 1e-2 * Δb         # noise amplitude
 f = -1e-4
-Δt₀ = 10minutes
+Cᴰ = 2e-3
+Δt₀ = 2minutes
 stop_time = 80days
 wizard_iteration_interval = 20
 progress_iteration_interval = 100
 filename = "mixed_layer_baroclinic_adjustment"
-mixed_layer_depth = h = 100meters
+mixed_layer_depth = h = 200meters
+shear_layer_depth = H = 500meters
 save_fields_interval = 0.5day
 
-parameters = (; N², Δb, Δy, h)
+parameters = (; Cᴰ, N², Δb, Δy, h, H)
 
 @inline unstratified_b(x, y, z, p) = p.Δb * ramp(y, p.Δy)
 @inline linearly_stratified_b(x, y, z, p) = p.N² * z + p.Δb * ramp(y, p.Δy)
 
 @inline function piecewise_stratified_b(x, y, z, p)
-    by = p.Δb * ramp(y, p.Δy)
+    by = p.Δb * ramp(y, p.Δy) * exp(z / p.H)
     bz = ifelse(z < -p.h, p.N² * (z + p.h), zero(z))
     return by + bz
 end
 
 #bᵢ(x, y, z) = unstratified_b(x, y, z, parameters) + ϵᵇ * randn()
 bᵢ(x, y, z) = piecewise_stratified_b(x, y, z, parameters) + ϵᵇ * randn()
-uᵢ(x, y, z) = - (z + Lz) * Δb / f * d_ramp_dy(y, Δy)
+
+# f uz = - by
+uᵢ(x, y, z) = - Δb / f * d_ramp_dy(y, Δy) * H * exp(z / H)
 
 grid = RectilinearGrid(architecture;
                        size = (Nx, Ny, Nz),
@@ -49,14 +55,26 @@ grid = RectilinearGrid(architecture;
                        z = (-Lz, 0),
                        topology = (Periodic, Bounded, Bounded))
 
-model = HydrostaticFreeSurfaceModel(; grid,
+@inline u_drag(x, y, t, u, v, p) = - p.Cᴰ * sqrt(u^2 + v^2) * u
+@inline v_drag(x, y, t, u, v, p) = - p.Cᴰ * sqrt(u^2 + v^2) * v
+
+u_drag_bc = FluxBoundaryCondition(u_drag; field_dependencies=(:u, :v), parameters)
+v_drag_bc = FluxBoundaryCondition(v_drag; field_dependencies=(:u, :v), parameters)
+
+u_bcs = FieldBoundaryConditions(bottom=u_drag_bc)
+v_bcs = FieldBoundaryConditions(bottom=v_drag_bc)
+
+boundary_conditions=(u=u_bcs, v=v_bcs)
+
+model = HydrostaticFreeSurfaceModel(; grid, boundary_conditions,
                                     coriolis = FPlane(; f),
                                     buoyancy = BuoyancyTracer(),
-                                    tracers = :b,
+                                    tracers = (:b, :r),
                                     momentum_advection = WENO(),
                                     tracer_advection = WENO())
 
-set!(model, b=bᵢ, u=uᵢ)
+rᵢ(x, y, z) = z
+set!(model, b=bᵢ, u=uᵢ, r=rᵢ)
 
 simulation = Simulation(model; Δt=Δt₀, stop_time)
 wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=20minutes)
@@ -84,12 +102,17 @@ simulation.callbacks[:print_progress] =
     Callback(print_progress,
              IterationInterval(progress_iteration_interval))
 
-b = model.tracers.b
+b, r = model.tracers.b
 u, v, w = model.velocities
-ζ = ∂y(v) - ∂y(u)
+ζ = ∂x(v) - ∂y(u)
 
 B = Field(Average(b, dims=1))
+R = Field(Average(r, dims=1))
 U = Field(Average(u, dims=1))
+
+u′ = u - U
+k = (u′^2 + v^2) / 2
+K = Field(Average(k, dims=1))
 
 slicers = (west = (1, :, :),
            east = (grid.Nx, :, :),
@@ -101,14 +124,14 @@ slicers = (west = (1, :, :),
 for side in keys(slicers)
     indices = slicers[side]
 
-    simulation.output_writers[side] = JLD2OutputWriter(model, (; b, ζ);
+    simulation.output_writers[side] = JLD2OutputWriter(model, (; b, ζ, k);
                                                        filename = filename * "_$(side)_slice",
                                                        schedule = TimeInterval(save_fields_interval),
                                                        overwrite_existing = true,
                                                        indices)
 end
 
-simulation.output_writers[:zonal] = JLD2OutputWriter(model, (b=B, u=U);
+simulation.output_writers[:zonal] = JLD2OutputWriter(model, (b=B, u=U, k=K);
                                                      schedule = TimeInterval(save_fields_interval),
                                                      overwrite_existing = true,
                                                      filename = filename * "_zonal_average")

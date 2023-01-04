@@ -4,7 +4,7 @@ using GLMakie
 
 filename = "mixed_layer_baroclinic_adjustment"
 
-fig = Figure(resolution = (2400, 1600))
+fig = Figure(resolution = (1800, 1200))
 
 bt_t = FieldTimeSeries(filename * "_top_slice.jld2", "b")
 ζt_t = FieldTimeSeries(filename * "_top_slice.jld2", "ζ")
@@ -12,12 +12,14 @@ bb_t = FieldTimeSeries(filename * "_bottom_slice.jld2", "b")
 ζb_t = FieldTimeSeries(filename * "_bottom_slice.jld2", "ζ")
 B_t = FieldTimeSeries(filename * "_zonal_average.jld2", "b")
 U_t = FieldTimeSeries(filename * "_zonal_average.jld2", "u")
+K_t = FieldTimeSeries(filename * "_zonal_average.jld2", "k")
 
-xc, yc, zc = nodes(b_t)
-xf, yf, zf = nodes(ζ_t)
+grid = K_t.grid
+xc, yc, zc = nodes(bt_t)
+xf, yf, zf = nodes(ζt_t)
 zf = znodes(Face, grid)[2:grid.Nz]
 
-times = b_t.times
+times = bt_t.times
 Nt = length(times)
 slider = Slider(fig[1, 1:2], range=1:Nt, startvalue=1)
 n = slider.value
@@ -43,6 +45,7 @@ Colorbar(fig[3, 3], hm, label="Bottom vorticity (s⁻¹)")
 
 Un = @lift interior(U_t[$n], 1, :, :)
 Bn = @lift interior(B_t[$n], 1, :, :)
+Kn = @lift interior(K_t[$n], 1, :, :)
 
 N² = @lift begin
     N²_op = ∂z(B_t[$n])
@@ -56,23 +59,41 @@ Uzn = @lift begin
     interior(Uz, 1, :, 2:grid.Nz)
 end
 
-Uzlim = 5e-4
-Ulim = 0.05
+Kzn = @lift begin
+    Kz_op = ∂z(K_t[$n])
+    Kz = compute!(Field(Kz_op))
+    interior(Kz, 1, :, 2:grid.Nz)
+end
 
-axu = Axis(fig[4, 1:2])
+Uzlim = 1e-3
+Ulim = 0.2
+Klim = 0.2
+Kzlim = 1e-3
+
+axu = Axis(fig[4, 2])
 hm = heatmap!(axu, yc, zc, Un, colormap=:balance, colorrange=(-Ulim, Ulim))
 Colorbar(fig[4, 3], hm, label="Zonal velocity (m s⁻¹)")
 contour!(axu, yc, zc, Bn; levels=15, linewidth=2, color=:black)
 
-axs = Axis(fig[5, 1:2])
+axs = Axis(fig[5, 2])
 hm = heatmap!(axs, yc, zf, Uzn, colormap=:balance, colorrange=(-Uzlim, Uzlim))
 Colorbar(fig[5, 3], hm, label="Zonal shear (s⁻¹)")
 contour!(axs, yc, zc, Bn; levels=15, linewidth=2, color=:black)
 
-axN = Axis(fig[6, 1:2])
-hm = heatmap!(axN, yc, zf, N², colorrange=(0, 1e-5))
+axN = Axis(fig[6, 2])
+hm = heatmap!(axN, yc, zf, N², colorrange=(0, 5e-5))
 Colorbar(fig[6, 3], hm, label="Buoyancy frequency (s⁻²)")
 contour!(axN, yc, zc, Bn; levels=15, linewidth=2, color=:black)
+
+axk = Axis(fig[4, 1])
+hm = heatmap!(axk, yc, zc, Kn, colormap=:thermal, colorrange=(0, Klim))
+Colorbar(fig[4, 0], hm, label="Eddy kinetic energy (m² s⁻²)", flipaxis=false)
+contour!(axu, yc, zc, Bn; levels=15, linewidth=2, color=:black)
+
+axkz = Axis(fig[5, 1])
+hm = heatmap!(axkz, yc, zf, Kzn, colormap=:balance, colorrange=(-Kzlim, Kzlim))
+Colorbar(fig[5, 0], hm, label="EKE vertical gradient (m s⁻²)", flipaxis=false)
+contour!(axs, yc, zc, Bn; levels=15, linewidth=2, color=:black)
 
 display(fig)
 
