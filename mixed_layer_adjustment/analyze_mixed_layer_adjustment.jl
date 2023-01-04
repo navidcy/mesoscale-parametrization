@@ -2,7 +2,8 @@ using Oceananigans
 using Oceananigans.Units
 using GLMakie
 
-filename = "mixed_layer_baroclinic_adjustment"
+#filename = "mixed_layer_baroclinic_adjustment"
+filename = "mixed_layer_baroclinic_equilibrium"
 
 fig = Figure(resolution = (1800, 1200))
 
@@ -97,3 +98,6 @@ contour!(axs, yc, zc, Bn; levels=15, linewidth=2, color=:black)
 
 display(fig)
 
+record(fig, filename * ".mp4", 1:Nt, framerate=12) do nn
+    n[] = nn
+end
