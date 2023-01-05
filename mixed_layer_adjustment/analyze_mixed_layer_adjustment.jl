@@ -1,11 +1,10 @@
 using Oceananigans
 using Oceananigans.Units
 using GLMakie
+using Statistics
 
-#filename = "mixed_layer_baroclinic_adjustment"
-filename = "mixed_layer_baroclinic_equilibrium"
-
-fig = Figure(resolution = (1800, 1200))
+filename = "mixed_layer_baroclinic_adjustment"
+#filename = "mixed_layer_baroclinic_equilibrium"
 
 bt_t = FieldTimeSeries(filename * "_top_slice.jld2", "b")
 ζt_t = FieldTimeSeries(filename * "_top_slice.jld2", "ζ")
@@ -22,6 +21,8 @@ zf = znodes(Face, grid)[2:grid.Nz]
 
 times = bt_t.times
 Nt = length(times)
+
+fig = Figure(resolution = (1800, 1200))
 slider = Slider(fig[1, 1:2], range=1:Nt, startvalue=1)
 n = slider.value
 
@@ -101,3 +102,31 @@ display(fig)
 record(fig, filename * ".mp4", 1:Nt, framerate=12) do nn
     n[] = nn
 end
+
+#=
+Nx, Ny, Nz = size(grid)
+K_zt = zeros(Nz, Nt)
+
+for n = 1:Nt
+    K_zt[:, n] .= interior(mean(K_t[n], dims=2), 1, 1, :)
+end
+
+Klim = maximum(abs, K_zt) / 2
+
+fig = Figure()
+ax = Axis(fig[1, 1], xlabel="Time (days)", ylabel="z (m)")
+ax2 = Axis(fig[1, 2], xlabel="Mesoscale kinetic energy (m² s⁻²)", ylabel="z (m)")
+heatmap!(ax, times ./ day, zc, permutedims(K_zt, (2, 1)), colorrange=(0, Klim))
+
+ns = [80, 120, 150, 160]
+
+for n in ns 
+    lines!(ax2, K_zt[:, n], zc, label="t = " * prettytime(times[n]))
+end
+
+axislegend(ax2, position=:rb)
+
+ylims!(ax2, -2000, 0)
+
+display(fig)
+=#
